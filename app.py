@@ -9,9 +9,13 @@ from openai import OpenAI
 # ---------------------------
 # OpenRouter setup
 # ---------------------------
+load_dotenv()
+
+api_key = os.getenv("OPENROUTER_API_KEY")
+
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key="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"
+    api_key=api_key
 )
 
 #loading the data
