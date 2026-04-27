@@ -1,4 +1,4 @@
-from langchain_community.document_loaders import TextLoader
+from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -19,7 +19,7 @@ client = OpenAI(
 )
 
 #loading the data
-loader = TextLoader("data/medical.txt")
+loader = PyPDFLoader("data/dengue.pdf")
 docs = loader.load()
 
 #split into documents
@@ -41,14 +41,22 @@ while True:
         break
 
     # Retrieve relevant chunks
-    docs = retriever.invoke(query)
+    retrieved_docs = retriever.invoke(query)
 
-    context = "\n".join([doc.page_content for doc in docs])
+    if not retrieved_docs:
+        print("\nAnswer:\n I don't know")
+        continue
+
+    # Build context
+    context = "\n".join([doc.page_content for doc in retrieved_docs])
 
     # Prompt
     prompt = f"""
-You are a medical assistant.
-Answer ONLY using the context below.
+You are a knowledgeable medical assistant.
+
+Answer clearly and in detail using ONLY the context below.
+Explain symptoms, causes, and key points if available.
+
 If the answer is not in the context, say "I don't know".
 This is not medical advice.
 
@@ -65,7 +73,23 @@ Question:
         messages=[{"role": "user", "content": prompt}]
     )
 
-    print("\nAnswer:\n", response.choices[0].message.content)
+    # Extract answer
+    answer = response.choices[0].message.content
+
+    print("\nAnswer:\n", answer)
+
+    # 🔥 Show sources (NEW)
+    print("\nSources:")
+    seen = set()
+
+    for doc in retrieved_docs:
+        source = doc.metadata.get("source", "Unknown")
+        page = doc.metadata.get("page", "N/A")
+
+        key = (source, page)
+        if key not in seen:
+            seen.add(key)
+            print(f"- {source}, page {page}")
 
 
 
